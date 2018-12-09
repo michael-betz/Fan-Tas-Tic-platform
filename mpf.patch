@@ -1,0 +1,50 @@
+diff --git a/mpf/config_spec.yaml b/mpf/config_spec.yaml
+index 980bb68..474d702 100644
+--- a/mpf/config_spec.yaml
++++ b/mpf/config_spec.yaml
+@@ -1,3 +1,32 @@
++fantastic:
++    __valid_in__: machine
++    debug:       single|bool|False
++    port:        single|str|None
++    led_clock_0: single|int|3200000
++    led_clock_1: single|int|3200000
++    led_clock_2: single|int|3200000
++    pulse_power: single|int|None
++    hold_power:  single|int|None
++
++rpi_dmd:
++    __valid_in__: machine
++    console_log:        single|enum(none,basic,full)|none
++    file_log:           single|enum(none,basic,full)|basic
++    x_size:             single|int|32
++    y_size:             single|int|32
++    hardware_mapping:   single|str|regular
++    rows:               single|int|32
++    chain_length:       single|int|1
++    parallel:           single|int|1
++    pwm_bits:           single|int|11
++    pwm_lsb_nanoseconds: single|int|130
++    brightness:         single|int|100
++    scan_mode:          single|int|0
++    led_rgb_sequence:   single|str|RGB
++    disable_hardware_pulsing: single|bool|False
++    inverse_colors:     single|bool|False
++    gpio_slowdown:      single|int|1
++
+ accelerometers:
+     __valid_in__: machine
+     number: single|str|
+diff --git a/mpf/mpfconfig.yaml b/mpf/mpfconfig.yaml
+index 2ed9efb..b26916d 100644
+--- a/mpf/mpfconfig.yaml
++++ b/mpf/mpfconfig.yaml
+@@ -93,6 +93,8 @@ mpf:
+         mpf.plugins.osc.Osc
+ 
+     platforms:
++        fantastic: fantastic_platform.fantastic_hardware_platform.FanTasTicHardwarePlatform
++        rpi_dmd: fantastic_platform.rpi_rgb_dmd.RpiRgbDmd
+         fadecandy: mpf.platforms.fadecandy.FadecandyHardwarePlatform
+         fast: mpf.platforms.fast.fast.FastHardwarePlatform
+         i2c_servo_controller: mpf.platforms.i2c_servo_controller.I2CServoControllerHardwarePlatform
