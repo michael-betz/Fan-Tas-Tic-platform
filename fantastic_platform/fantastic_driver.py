@@ -1,13 +1,12 @@
 from mpf.platforms.interfaces.driver_platform_interface import DriverPlatformInterface, PulseSettings, HoldSettings
 
 class FanTasTicDriver(DriverPlatformInterface):
-    """
-        Represents and handles one solenoid PWM output
-    """
+    """ Represents and handles one solenoid PWM output """
     MAX_PWM_VALUE = 7           #Max value for PWM drivers
     MAX_HW_PWM_VALUE = 4000     #Max value for HW PWM drivers
     # Channels which support high resolution hardware PWM
     HW_PWM_CHANNELS = (0x3C, 0x3D, 0x3E, 0x3F)
+    __slots__ = ["serialCom", "hwIndex", "tPulse", "pwmHigh", "pwmLow"]
 
     def __init__(self, config, number, serialCom):
         super().__init__(config, number)
@@ -18,13 +17,13 @@ class FanTasTicDriver(DriverPlatformInterface):
         # Parse default values (used to setup quickfire rules)
         #-------------------------------------------------------------
         # config = DriverConfig(
-        #     default_pulse_ms=45, 
-        #     default_pulse_power=0.5, 
-        #     default_hold_power=None, 
-        #     default_recycle=False, 
-        #     max_pulse_ms=None, 
-        #     max_pulse_power=1.0, 
-        #     max_hold_power=None 
+        #     default_pulse_ms=45,
+        #     default_pulse_power=0.5,
+        #     default_hold_power=None,
+        #     default_recycle=False,
+        #     max_pulse_ms=None,
+        #     max_pulse_power=1.0,
+        #     max_hold_power=None
         # )
         self.tPulse  = int( config.default_pulse_ms )
         self.pwmHigh = self.getPwmValue( config.default_pulse_power )
@@ -68,9 +67,9 @@ class FanTasTicDriver(DriverPlatformInterface):
             power = 0
         if not (0 <= power <= 1):
             raise ValueError("PWM power level outside range", power)
-        if( self.hwIndex in FanTasTicDriver.HW_PWM_CHANNELS ): 
+        if( self.hwIndex in FanTasTicDriver.HW_PWM_CHANNELS ):
             maxPwm = FanTasTicDriver.MAX_HW_PWM_VALUE #Hardware PWM channel
-        else:                                          
+        else:
             maxPwm = FanTasTicDriver.MAX_PWM_VALUE    #I2C BCM channel
         #round result up so maxPwm can be reached
         return int( power * maxPwm + 0.5 )

@@ -2,6 +2,8 @@ from asyncio import AbstractEventLoop
 from mpf.platforms.interfaces.light_platform_interface import LightPlatformSoftwareFade
 
 class FanTasTicLight( LightPlatformSoftwareFade ):
+    __slots__ = ["arrs", "inds"]
+
     def __init__(self, loop: AbstractEventLoop, software_fade_ms: int, number: str, ledByteArrayRefs: list ) -> None:
         """
             ledByteArrayRef:

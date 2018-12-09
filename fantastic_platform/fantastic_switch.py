@@ -2,7 +2,9 @@ from typing import Any
 from mpf.platforms.interfaces.switch_platform_interface import SwitchPlatformInterface
 
 class FanTasTicSwitch(SwitchPlatformInterface):
-    """Represents a switch in a pinball machine used with virtual hardware."""
+    """ Represents a switch input """
+    __slots__ = ["serialCom", "hwIndex"]
+
     def __init__(self, config: "SwitchConfig", number: Any, serialCom) -> None:
         self.serialCom = serialCom
         self.hwIndex = int( number )

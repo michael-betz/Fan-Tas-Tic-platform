@@ -46,6 +46,13 @@ class FanTasTicHardwarePlatform(
         self.machine = machine
         atexit.register(self.stop)
         # ----------------------------------------------------------------
+        #  Define fantastic specific .yaml keys
+        # ----------------------------------------------------------------
+        self.config = self.machine.config_validator.validate_config("fantastic", self.machine.config.get('fantastic', {}))
+        # print("*************************")
+        # print(self.machine.config.get('fantastic', {}))
+        # print(self.config)
+        # ----------------------------------------------------------------
         #  Platform features
         # ----------------------------------------------------------------
         self.features['tickless'] = True
@@ -73,12 +80,28 @@ class FanTasTicHardwarePlatform(
             FanTasTicHardwarePlatform.MAX_QUICK_RULES
         self.swNameToRuleIdDict = defaultdict(list)
 
+    @classmethod
+    def get_config_spec(cls):
+        return "fantastic", """
+    __valid_in__: machine
+    debug:       single|bool|False
+    port:        single|str|None
+    led_clock_0: single|int|3200000
+    led_clock_1: single|int|3200000
+    led_clock_2: single|int|3200000
+    pulse_power: single|int|None
+    hold_power:  single|int|None
+        """
+
     @asyncio.coroutine
     def initialize(self):
         """
         Connect to serial port from the config.
         Note baudrate is ignored by hardware (virtual usb serial port)
         """
+        # ----------------------------------------------------------------
+        #  Open serial connection
+        # ----------------------------------------------------------------
         comm = FanTasTicSerialCommunicator(
             platform=self,
             port=self.config["port"],
