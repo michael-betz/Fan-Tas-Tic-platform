@@ -28,22 +28,25 @@ class RpiRgbDmd(RgbDmdPlatform):
     def get_config_spec(cls):
         return "rpi_dmd", """
 __valid_in__:       machine
-console_log:        single|enum(none,basic,full)|none
-file_log:           single|enum(none,basic,full)|basic
-x_size:             single|int|32
-y_size:             single|int|32
 hardware_mapping:   single|str|regular
 rows:               single|int|32
+cols:               single|int|32
 chain_length:       single|int|1
 parallel:           single|int|1
 pwm_bits:           single|int|11
 pwm_lsb_nanoseconds: single|int|130
 brightness:         single|int|100
 scan_mode:          single|int|0
-led_rgb_sequence:   single|str|RGB
+multiplexing:       single|int|0
+row_address_type:   single|int|0
 disable_hardware_pulsing: single|bool|False
+show_refresh_rate:  single|bool|False
 inverse_colors:     single|bool|False
+led_rgb_sequence:   single|str|RGB
+pixel_mapper_config:single|str|""
 gpio_slowdown:      single|int|1
+daemon:             single|bool|False
+drop_privileges:    single|bool|True
     """
 
     @asyncio.coroutine
@@ -76,15 +79,13 @@ class RpiRgbDmdDevice(DmdPlatformInterface):
     def __init__(self, config):
         """Initialise RpiRgbDmd device."""
         self.config = config
-        xs = config["x_size"]
-        ys = config["y_size"]
+        xs = config["cols"]
+        ys = config["rows"]
         self.img = Image.frombytes("RGB", (xs, ys), b'\x11' * xs * ys * 3)
         self.rgbOpts = RGBMatrixOptions()
         self.rgbOpts.drop_privileges = 1
         # Rudeboy way of setting the RGBMatrixOptions
         for k, v in config.items():
-            if k in ("console_log", "file_log", "x_size", "y_size"):
-                continue
             try:
                 setattr(self.rgbOpts, k, v)
             except Exception:
