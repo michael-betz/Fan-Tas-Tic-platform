@@ -14,13 +14,14 @@ from rgbmatrix import RGBMatrix, RGBMatrixOptions
 
 class RpiRgbDmd(RgbDmdPlatform):
     """Raspberry Pi GPIO RGB DMD."""
-    __slots__ = ["_dmd"]
+    __slots__ = ["_dmd", "config"]
 
     def __init__(self, machine):
         """Initialise RGB DMD."""
         super().__init__(machine)
         self.features['tickless'] = True
         self._dmd = None
+        self.config = None
         atexit.register(self.stop)
 
     @classmethod

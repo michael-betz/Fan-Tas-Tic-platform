@@ -48,6 +48,7 @@ class FanTasTicHardwarePlatform(
         # ----------------------------------------------------------------
         #  Global (state) variables
         # ----------------------------------------------------------------
+        self.config = None
         self.serialCom = None  # Serial communicator object
         # State of _ALL_ posisble input switches as Binary bit-field
         self.hw_switch_data = None
@@ -85,8 +86,8 @@ class FanTasTicHardwarePlatform(
         if 'fantastic' not in self.machine.config:
             raise AssertionError('Add `fantastic:` to your machine config')
         self.config = self.machine.config_validator.validate_config(
-            "fantastic",
-            self.machine.config['fantastic']
+            config_spec="fantastic",
+            source=self.machine.config['fantastic']
         )
         # ----------------------------------------------------------------
         #  Open serial connection (baudrate is ignored by hardware)
