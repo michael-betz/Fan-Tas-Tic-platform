@@ -41,26 +41,10 @@ class FanTasTicHardwarePlatform(
     def __init__(self, machine) -> None:
         """ Initialize FanTasTic PCB """
         super().__init__(machine)
+        atexit.register(self.stop)
         self.log = logging.getLogger("FanTasTic")
         self.log.debug("Configuring FanTasTic hardware interface.")
-        self.machine = machine
-        atexit.register(self.stop)
-        # ----------------------------------------------------------------
-        #  Define fantastic specific .yaml keys
-        # ----------------------------------------------------------------
-        self.config = self.machine.config_validator.validate_config("fantastic", self.machine.config.get('fantastic', {}))
-        # print("*************************")
-        # print(self.machine.config.get('fantastic', {}))
-        # print(self.config)
-        # ----------------------------------------------------------------
-        #  Platform features
-        # ----------------------------------------------------------------
         self.features['tickless'] = True
-        # ----------------------------------------------------------------
-        #  Define fantastic specific yaml options
-        # ----------------------------------------------------------------
-        self.config = self.machine.config["fantastic"]
-        self.machine.config_validator.validate_config("fantastic", self.config)
         # ----------------------------------------------------------------
         #  Global (state) variables
         # ----------------------------------------------------------------
@@ -95,12 +79,17 @@ class FanTasTicHardwarePlatform(
 
     @asyncio.coroutine
     def initialize(self):
-        """
-        Connect to serial port from the config.
-        Note baudrate is ignored by hardware (virtual usb serial port)
-        """
         # ----------------------------------------------------------------
-        #  Open serial connection
+        #  Register fantastic specific .yaml keys
+        # ----------------------------------------------------------------
+        if 'fantastic' not in self.machine.config:
+            raise AssertionError('Add `fantastic:` to your machine config')
+        self.config = self.machine.config_validator.validate_config(
+            "fantastic",
+            self.machine.config['fantastic']
+        )
+        # ----------------------------------------------------------------
+        #  Open serial connection (baudrate is ignored by hardware)
         # ----------------------------------------------------------------
         comm = FanTasTicSerialCommunicator(
             platform=self,

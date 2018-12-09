@@ -37,5 +37,6 @@ setup(
     entry_points='''
     [mpf.platforms]
     fantastic_platform=fantastic_platform.fantastic_hardware_platform:FanTasTicHardwarePlatform
+    rpi_dmd=fantastic_platform.rpi_rgb_dmd:RpiRgbDmd
     '''
 )
