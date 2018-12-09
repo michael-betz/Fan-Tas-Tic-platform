@@ -44,7 +44,6 @@ led_rgb_sequence:   single|str|RGB
 disable_hardware_pulsing: single|bool|False
 inverse_colors:     single|bool|False
 gpio_slowdown:      single|int|1
-debug:              single|bool|False
     """
 
     @asyncio.coroutine
@@ -81,7 +80,7 @@ class RpiRgbDmdDevice(DmdPlatformInterface):
         ys = config["y_size"]
         self.img = Image.frombytes("RGB", (xs, ys), b'\x11' * xs * ys * 3)
         self.rgbOpts = RGBMatrixOptions()
-        self.rgbOpts.drop_privileges = 0
+        self.rgbOpts.drop_privileges = 1
         # Rudeboy way of setting the RGBMatrixOptions
         for k, v in config.items():
             if k in ("console_log", "file_log", "x_size", "y_size"):
