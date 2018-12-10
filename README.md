@@ -8,7 +8,10 @@ Install this platform using:
 $ pip3 install -e .
 ```
 
-Also install the python bindings of (rpi-rgb-led-matrix)[https://github.com/hzeller/rpi-rgb-led-matrix/tree/master/bindings/python#python-3].
+# rpi-rgb-led-matrix support
+This allows to drive LED tiles directly from the raspberry PI GPIO port.
+
+Install the python bindings of [rpi-rgb-led-matrix](https://github.com/hzeller/rpi-rgb-led-matrix/tree/master/bindings/python#python-3).
 
 Then use it in your `config.yaml` like this:
 
