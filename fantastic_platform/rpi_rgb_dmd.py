@@ -43,7 +43,7 @@ disable_hardware_pulsing: single|bool|False
 show_refresh_rate:  single|bool|False
 inverse_colors:     single|bool|False
 led_rgb_sequence:   single|str|RGB
-pixel_mapper_config:single|str|""
+pixel_mapper_config: single|str|""
 gpio_slowdown:      single|int|1
 daemon:             single|bool|False
 drop_privileges:    single|bool|True
