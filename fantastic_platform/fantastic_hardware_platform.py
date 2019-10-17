@@ -24,7 +24,7 @@ import struct
 import asyncio
 from collections import defaultdict     # For dict of lists
 from mpf.core.platform import LightsPlatform, SwitchPlatform, DriverPlatform, \
-    DriverConfig, DriverSettings, SwitchSettings, SwitchConfig
+    DriverConfig, DriverSettings, SwitchSettings, SwitchConfig, I2cPlatform
 from fantastic_platform.fantastic_serial_communicator import \
     FanTasTicSerialCommunicator
 from fantastic_platform.fantastic_driver import FanTasTicDriver
@@ -34,7 +34,7 @@ import atexit
 
 
 class FanTasTicHardwarePlatform(
-    SwitchPlatform, DriverPlatform, LightsPlatform
+    SwitchPlatform, DriverPlatform, LightsPlatform, I2cPlatform
 ):
     MAX_QUICK_RULES = 64    # must match bit_rules.h
 
@@ -96,8 +96,9 @@ class FanTasTicHardwarePlatform(
             platform=self,
             port=self.config["port"],
             serialCommandCallbacks={
-                b'SW': self.receive_sw,  # States of all switches
-                b'SE': self.receive_se   # States of changed switches
+                b'SW': self.receive_sw,   # States of all switches
+                b'SE': self.receive_se,   # States of changed switches
+                b'I2': self.receive_i2c   # Result of I2C transaction
             }
         )
         self.serialCom = comm
@@ -384,6 +385,22 @@ class FanTasTicHardwarePlatform(
                 state=int(swState),
                 platform=self
             )
+
+    def receive_i2c(self, payload):
+        """
+        callback when the result of an I2C read / write operation was
+        received
+        payload = b' 1, 01[, ABCDEF]'
+        """
+        print("receive_i2c():", payload)
+        tok = payload.split(b',')
+        ch = int(tok[0])
+        flags = int(tok[1], 16)
+        rx = bytearray()
+        if len(tok >= 3):
+            rxHex = tok[2]
+            rx = bytearray.fromhex(rxHex.decode())
+            # TODO Notify the I2C object that new data has been received
 
     # ----------------------------------------------------------------------
     #  Lights !!!

@@ -70,7 +70,7 @@ class FanTasTicSerialCommunicator(BaseSerialCommunicator):
             payload = completeMsg[3:]
             # Can't use try since it swallows too many errors for now
             if cmd in self._serialCommands:
-                self._serialCommands[cmd]( payload )
+                self._serialCommands[cmd](payload)
             else:
                 self.log.error("Received unknown serial command? %s", completeMsg)
 
