@@ -7,18 +7,27 @@ class FanTasTicSwitch(SwitchPlatformInterface):
 
     def __init__(self, config: "SwitchConfig", number: Any, serialCom) -> None:
         self.serialCom = serialCom
-        self.hwIndex = int( number )
-        super().__init__(config, self.hwIndex )
+        self.hwIndex = int(number)
+        super().__init__(config, self.hwIndex)
         # sanity check the hwIndex
-        if( self.hwIndex<0 or self.hwIndex>319 or self.hwIndex in range(64,71) ):
-            raise ValueError("Invalid switch hwIndex: 0x{0:02x}".format(self.hwIndex) )
+        if (
+            self.hwIndex < 0 or
+            self.hwIndex > 0x13F or            # Out of range
+            self.hwIndex in range(0x40, 0x47)  # I2C Solenoid driver
+        ):
+            raise ValueError(
+                "Invalid switch hwIndex: 0x{0:02x}".format(self.hwIndex)
+            )
+
         # Enable / disable the debouncing with DEB command
-        if( config.debounce ):
-            self.serialCom.send( "DEB {0:d} 1\n".format(self.hwIndex) )
+        if config.debounce:
+            self.serialCom.send("DEB {0:d} 1\n".format(self.hwIndex))
         else:
-            self.serialCom.send( "DEB {0:d} 0\n".format(self.hwIndex) )
+            self.serialCom.send("DEB {0:d} 0\n".format(self.hwIndex))
+
         # Enable PCF internal pullups
-        self.serialCom.send("HI {0:d}\n".format(self.hwIndex))
+        if self.hwIndex >= 0x48:
+            self.serialCom.send("HI {0:d}\n".format(self.hwIndex))
 
     def get_board_name(self):
         """Return the name of the board of this driver."""

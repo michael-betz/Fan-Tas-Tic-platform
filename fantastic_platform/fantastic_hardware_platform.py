@@ -19,7 +19,6 @@ Required modifications:
     hold_power: single|int|None
 """
 
-import logging
 import struct
 import asyncio
 from collections import defaultdict     # For dict of lists
@@ -30,6 +29,7 @@ from fantastic_platform.fantastic_serial_communicator import \
 from fantastic_platform.fantastic_driver import FanTasTicDriver
 from fantastic_platform.fantastic_light import FanTasTicLight
 from fantastic_platform.fantastic_switch import FanTasTicSwitch
+from fantastic_platform.fantastic_i2c import FanTasTicI2c
 import atexit
 
 
@@ -42,17 +42,33 @@ class FanTasTicHardwarePlatform(
         """ Initialize FanTasTic PCB """
         super().__init__(machine)
         atexit.register(self.stop)
-        self.log = logging.getLogger("FanTasTic")
-        self.log.debug("Configuring FanTasTic hardware interface.")
+        # ----------------------------------------------------------------
+        #  Register fantastic specific .yaml keys
+        # ----------------------------------------------------------------
+        if 'fantastic' not in self.machine.config:
+            raise AssertionError('Add `fantastic:` to your machine config')
+        self.config = self.machine.config_validator.validate_config(
+            config_spec="fantastic",
+            source=self.machine.config['fantastic']
+        )
+        self._configure_device_logging_and_debug("FanTasTic", self.config)
+        self.debug_log("Configuring FanTasTic hardware interface")
         self.features['tickless'] = True
         # ----------------------------------------------------------------
         #  Global (state) variables
         # ----------------------------------------------------------------
-        self.config = None
         self.serialCom = None  # Serial communicator object
+
         # State of _ALL_ posisble input switches as Binary bit-field
         self.hw_switch_data = None
         self.hw_switch_gotit = asyncio.Event()
+
+        # to notify an I2C object waiting on receiving data
+        self.i2c_rx_data = bytearray()
+        self.i2c_channel = None
+        self.i2c_flags = 0
+        self.i2c_gotit = asyncio.Event()
+
         # Keep the state of the WS2811 LEDs in bytearrays
         # This is efficient and close to the hardware
         # as data can be dumped to serial port without conversion
@@ -78,17 +94,7 @@ class FanTasTicHardwarePlatform(
     hold_power:  single|int|None
         """
 
-    @asyncio.coroutine
-    def initialize(self):
-        # ----------------------------------------------------------------
-        #  Register fantastic specific .yaml keys
-        # ----------------------------------------------------------------
-        if 'fantastic' not in self.machine.config:
-            raise AssertionError('Add `fantastic:` to your machine config')
-        self.config = self.machine.config_validator.validate_config(
-            config_spec="fantastic",
-            source=self.machine.config['fantastic']
-        )
+    async def initialize(self):
         # ----------------------------------------------------------------
         #  Open serial connection (baudrate is ignored by hardware)
         # ----------------------------------------------------------------
@@ -102,7 +108,7 @@ class FanTasTicHardwarePlatform(
             }
         )
         self.serialCom = comm
-        yield from comm.connect()
+        await comm.connect()
         # ----------------------------------------------------------------
         #  Set some global firmware parameters
         # ----------------------------------------------------------------
@@ -120,7 +126,7 @@ class FanTasTicHardwarePlatform(
             if ledKey in self.config:
                 tempSpeed = int(self.config[ledKey])
                 comm.send("LEC {0} {1}\n".format(i, tempSpeed))
-                self.log.debug("LEC {0} {1}\n".format(i, tempSpeed))
+                self.debug_log("LEC {0} {1}\n".format(i, tempSpeed))
 
     def stop(self):
         if self.serialCom:
@@ -135,8 +141,8 @@ class FanTasTicHardwarePlatform(
             for channel, ledDat in enumerate(self.ledByteData):
                 if len(ledDat) > 0:
                     msg = bytes(
-                        "LED {0} {1}\n".format(channel, len(ledDat)), "utf8"
-                    ) + b"\0" * len(ledDat)
+                        'LED {0} {1}\n'.format(channel, len(ledDat)), 'utf8'
+                    ) + b'\0' * len(ledDat)
                     self.serialCom.send(msg)
             # Close serial connection
             self.serialCom.stop()
@@ -251,7 +257,7 @@ class FanTasTicHardwarePlatform(
             CMD += "RUL {0} {1} {2} {3} {4} {5} {6} {7}\n".format(*rulTuple)
             self.swNameToRuleIdDict[switch_obj.number].append(rulId)
             self.configuredRules[rulId] = rulTuple
-        self.log.info(
+        self.info_log(
             "{0} [{1}]".format(
                 CMD.replace('\n', ', '),
                 switch_obj.number
@@ -282,7 +288,7 @@ class FanTasTicHardwarePlatform(
             # Just in case the flipper still in hold state, reset the coil
             CMD += "OUT {0} 0\n".format(rulTuple[2])
         del rulIds
-        self.log.info("{0} [{1}]".format(CMD.replace('\n', ', '), sw_name))
+        self.info_log("{0} [{1}]".format(CMD.replace('\n', ', '), sw_name))
         self.serialCom.send(CMD)
 
     def set_pulse_on_hit_and_release_rule(
@@ -335,13 +341,12 @@ class FanTasTicHardwarePlatform(
         """
         return FanTasTicSwitch(config, number, self.serialCom)
 
-    @asyncio.coroutine
-    def get_hw_switch_states(self):
+    async def get_hw_switch_states(self):
         """get the state of all Switches at once"""
         self.hw_switch_gotit.clear()
         self.serialCom.send("SW?\n")  # Request current state of all switches
-        self.log.info("Waiting for response to `SW?` command")
-        yield from self.hw_switch_gotit.wait()
+        self.info_log("Waiting for response to `SW?` command")
+        await self.hw_switch_gotit.wait()
         # ----------------------------------------------------------------
         #  Engage Solenoid 24 V power relay and start reporting switches
         # ----------------------------------------------------------------
@@ -357,7 +362,7 @@ class FanTasTicHardwarePlatform(
         # msg = b"00000000123456789ABCDEF0AFFE0000DEAD0000BEEF0000 ...
         # Process Hex values in groups of 8 (little endian)
         # hwIndex[0] = 0: b"FFFFFFFE...
-        # self.log.debug("Received SW: %s", payload)
+        # self.debug_log("Received SW: %s", payload)
         hwBytes = bytearray.fromhex(payload.decode())
         hwLongs = struct.unpack(">{0}I".format(len(hwBytes) // 4), hwBytes)
         # Now we have an array of bytes, but MPF expects an array of bits
@@ -386,21 +391,31 @@ class FanTasTicHardwarePlatform(
                 platform=self
             )
 
+    # ----------------------------------------------------------------------
+    #  I2C !!!
+    # ----------------------------------------------------------------------
+    async def configure_i2c(self, number: str) -> "I2cPlatformInterface":
+        ''' `number` must be in `<CHANNEL>-<I2C_ADDR[7]>` format '''
+        return FanTasTicI2c(number, self)
+
     def receive_i2c(self, payload):
         """
         callback when the result of an I2C read / write operation was
         received
         payload = b' 1, 01[, ABCDEF]'
         """
-        print("receive_i2c():", payload)
+        self.debug_log("receive_i2c(): %s", payload)
         tok = payload.split(b',')
-        ch = int(tok[0])
-        flags = int(tok[1], 16)
-        rx = bytearray()
-        if len(tok >= 3):
+        self.i2c_channel = int(tok[0])
+        self.i2c_flags = int(tok[1], 16)
+        if len(tok) == 3:
             rxHex = tok[2]
-            rx = bytearray.fromhex(rxHex.decode())
-            # TODO Notify the I2C object that new data has been received
+            self.i2c_rx_data = bytearray.fromhex(rxHex.decode())
+            self.debug_log("receive_i2c(): RX %s", self.i2c_rx_data)
+            # notify the I2C object that new data has been received
+            self.i2c_gotit.set()
+        else:
+            self.i2c_rx_data = bytearray()
 
     # ----------------------------------------------------------------------
     #  Lights !!!
