@@ -5,7 +5,7 @@ from setuptools import setup
 setup(
 
     name='fantastic_platform',
-    version='0.1.0',
+    version='0.54',
     description='Mission Pinball external platform for the Fantastic controller board',
     url='https://github.com/yetifrisstlama/Fan-Tas-Tic-platform',
     author='Michael Betz',

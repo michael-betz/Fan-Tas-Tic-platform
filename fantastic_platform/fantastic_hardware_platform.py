@@ -30,7 +30,6 @@ from fantastic_platform.fantastic_driver import FanTasTicDriver
 from fantastic_platform.fantastic_light import FanTasTicLight
 from fantastic_platform.fantastic_switch import FanTasTicSwitch
 from fantastic_platform.fantastic_i2c import FanTasTicI2c
-import atexit
 
 
 class FanTasTicHardwarePlatform(
@@ -41,7 +40,6 @@ class FanTasTicHardwarePlatform(
     def __init__(self, machine) -> None:
         """ Initialize FanTasTic PCB """
         super().__init__(machine)
-        atexit.register(self.stop)
         # ----------------------------------------------------------------
         #  Register fantastic specific .yaml keys
         # ----------------------------------------------------------------
@@ -83,7 +81,7 @@ class FanTasTicHardwarePlatform(
 
     @classmethod
     def get_config_spec(cls):
-        return "fantastic", """
+        return """
     __valid_in__: machine
     debug:       single|bool|False
     port:        single|str|None
@@ -92,7 +90,7 @@ class FanTasTicHardwarePlatform(
     led_clock_2: single|int|3200000
     pulse_power: single|int|None
     hold_power:  single|int|None
-        """
+        """, "fantastic"
 
     async def initialize(self):
         # ----------------------------------------------------------------
@@ -304,6 +302,16 @@ class FanTasTicHardwarePlatform(
         coil: DriverSettings
     ):
         self.write_hw_rule( enable_switch.hw_switch, 0, coil.hw_driver, "hold", disable_on_release=True )
+
+    def set_pulse_on_hit_and_release_and_disable_rule(
+        self,
+        enable_switch: SwitchSettings,
+        eos_switch: SwitchSettings,
+        coil: DriverSettings,
+        repulse_settings
+    ):
+        raise NotImplementedError
+
 
     def set_pulse_on_hit_and_enable_and_release_and_disable_rule(
         self,
