@@ -99,10 +99,19 @@ class FanTasTicSerialCommunicator(BaseSerialCommunicator):
     def _receive_er(self, payload):
         ''' Recived an error code like ER:xxxx\n '''
         errCode = int(payload)
-        self.log.error(
-            '''FanTasTic Hardware Error: 0x%02X
-            I'm lazy, look it up here
-            https://docs.google.com/spreadsheets/d/1QlxT6QhTLHodxV4uOGEEIK3jQQLPyiI4lmSObMyx4UE/edit?usp=sharing
-            ''',
-            errCode
-        )
+        if (errCode == 0x0100):
+            self.log.error(
+                '''FanTasTic Hardware Error: 0x%04X
+                FATAL!! I2C write error count exceeded. Stopping.
+                ''',
+                errCode
+            )
+            self.machine.stop('Fan-Tas-Tic: too many I2C write errors!')
+        else:
+            self.log.error(
+                '''FanTasTic Hardware Error: 0x%04X
+                I'm lazy, look it up here
+                https://docs.google.com/spreadsheets/d/1QlxT6QhTLHodxV4uOGEEIK3jQQLPyiI4lmSObMyx4UE/edit?usp=sharing
+                ''',
+                errCode
+            )
