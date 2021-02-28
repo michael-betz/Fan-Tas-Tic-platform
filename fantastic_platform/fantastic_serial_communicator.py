@@ -3,6 +3,49 @@ from mpf.platforms.base_serial_communicator import BaseSerialCommunicator
 
 
 class FanTasTicSerialCommunicator(BaseSerialCommunicator):
+    # from https://docs.google.com/spreadsheets/d/1QlxT6QhTLHodxV4uOGEEIK3jQQLPyiI4lmSObMyx4UE/edit?usp=sharing
+    errStrs = {
+        0x0000: "I2CMCommand() not added to queue",
+        0x0001: "I2C PCFL communication error",
+        0x0003: "No PCFLs discovered!",
+        0x0004: "Error, no more space in g_outWriterList :(",
+        0x0005: "WTF! unknow SPI DMA state.",
+        0x0006: "[CMDLINE_BAD_CMD]",
+        0x0007: "[CMDLINE_INVALID_ARG]",
+        0x0008: "[CMDLINE_TOO_FEW_ARGS]",
+        0x0009: "[CMDLINE_TOO_MANY_ARGS]",
+        0x000A: "taskUsbCommandParser(), Command buffer overflow, try a shorter command!",
+        0x000B: "Unknown currentMode!, taskUsbCommandParser()",
+        0x000C: "Cmd_SW(): string buffer overflow!",
+        0x000D: "inputSwitchId invalid, Cmd_DEB()",
+        0x000E: "Cmd_OUT(): I2C PWMvalue must be < , (1 << N_BIT_PWM)",
+        0x000F: "Cmd_OUT(): HW PWMvalue must be <= , MAX_PWM",
+        0x0010: "Cmd_OUT(): HW_INDEX_INVALID: , argv[1]",
+        0x0011: "Cmd_OUT(): HW_INDEX_INVALID: , argv[1]",
+        0x0012: "unknown hwIndex type (fatal)",
+        0x0013: "quickRuleId must be < , Cmd_RULE(),",
+        0x0014: "quickRuleId must be < , Cmd_RUL(),",
+        0x0015: "inputSwitchId invalid, Cmd_RUL(), argv[2] ",
+        0x0016: "pwmValues must be < , Cmd_RUL(), (1 << N_BIT_PWM) ",
+        0x0017: "HW pwmValues must be < , Cmd_RUL(), MAX_PWM ",
+        0x0018: "outputDriverId invalid, Cmd_RUL(), argv[3] ",
+        0x0019: "Invalid LED channel (), Cmd_LEC(), channel",
+        0x001A: "Invalid number of bytes (), Cmd_LED(), blobSize",
+        0x001B: "Timeout, could not access sendBuffer , spiSend(), channel",
+        0x001C: "Invalid LED channel (), Cmd_LED(), channel",
+        0x001D: "Invalid number of arguments (), Cmd_LED(), argc",
+        0x001E: "I2C Channel must be <= 4, Cmd_I2C()",
+        0x001F: "Too many bytes to receive: , max. , Cmd_I2C(), g_customI2CnBytesRx, CUSTOM_I2C_BUF_LEN",
+        0x0020: "Too many bytes to send: , max. , Cmd_I2C(), nBytesTx, CUSTOM_I2C_BUF_LEN",
+        0x0021: "handle_i2c_custom(): Error! I2C not in IDLE state",
+        0x0022: "handle_i2c_custom(): Could not allocate hexStr buffer!",
+        0x0023: "setup_pcf_rw(): busy error",
+        0x0024: "stupid_i2c_send(): timeout on ch ! SDA pullups installed?, _get_ch(b)",
+        0x0025: "i2cUnstucker()        : pin stuck low @: , base",
+        0x0100: "I2C write error count exceeded",
+        0x0101: "Watchdog timer expired"
+    }
+
     def __init__(self, platform, port: str, serialCommandCallbacks=dict()):
         '''
             serialCommandCallbacks
@@ -99,19 +142,15 @@ class FanTasTicSerialCommunicator(BaseSerialCommunicator):
     def _receive_er(self, payload):
         ''' Recived an error code like ER:xxxx\n '''
         errCode = int(payload)
-        if (errCode == 0x0100):
-            self.log.error(
-                '''FanTasTic Hardware Error: 0x%04X
-                FATAL!! I2C write error count exceeded. Stopping.
-                ''',
-                errCode
-            )
-            self.machine.stop('Fan-Tas-Tic: too many I2C write errors!')
+
+        errStr = FanTasTicSerialCommunicator.errStrs.get(errCode, "")
+        errStr = 'FanTasTic Hardware Error: 0x%04X. {:}'.format(
+            errCode, errStr
+        )
+
+        if (errCode >= 0x0100):
+            errStr += ' Fatal! Shutting down!'
+            self.log.error(errStr)
+            self.machine.stop(errStr)
         else:
-            self.log.error(
-                '''FanTasTic Hardware Error: 0x%04X
-                I'm lazy, look it up here
-                https://docs.google.com/spreadsheets/d/1QlxT6QhTLHodxV4uOGEEIK3jQQLPyiI4lmSObMyx4UE/edit?usp=sharing
-                ''',
-                errCode
-            )
+            self.log.error(errStr)
